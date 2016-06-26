@@ -47,7 +47,16 @@ wechat.on('init-message', function(){
 	console.log('init-message');
 })
 wechat.on('text-message', function(msg) {
-	console.log('text-message',msg);
+	var fromUser = msg.FromUserName;
+	var msgContent = msg.Content;
+	if(fromUser.substr(0,2) == '@@'){
+		console.log('text-message', 'from group', msgContent);
+	}else{
+		console.log('text-message', 'from friend', msgContent);
+		wechat.sendMsg(msgContent+msgContent,fromUser);
+	}
+	
+	//
 })
 wechat.on('picture-message', function(msg) {
 	console.log('picture-message',msg);

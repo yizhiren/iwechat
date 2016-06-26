@@ -393,8 +393,11 @@ Wechat.prototype.syncPolling = function() {
     var self = this;
     debug('syncpolling')
     self._syncCheck().then(function(state) {
-        if (state.retcode !== CONF.SYNCCHECK_RET_SUCCESS) {
-            throw new Error('你登出了微信')
+	if(1100 == state.retcode){
+		debug('logout from phone');
+		self.emit('logout')
+	}else if (state.retcode !== CONF.SYNCCHECK_RET_SUCCESS) {
+            throw new Error('unknow error, alias logout')
         } else {
             if (state.selector !== CONF.SYNCCHECK_SELECTOR_NORMAL) {
                 return self._sync().then(function(data) {
@@ -484,7 +487,8 @@ Wechat.prototype.start = function() {
             return self.syncPolling()
         }).catch(function(err) {
             debug('启动失败', err)
-            self.stop()
+            self.stop();
+            self.emit('error',err);
             throw new Error('启动失败')
         })
 }
