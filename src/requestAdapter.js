@@ -1,5 +1,6 @@
 var Promise = require('promise');
 var Request = require('poorequest');
+var url = require('url');
 
 var RequestAdapter = function(){
 	var requestbot = new Request();
@@ -52,16 +53,22 @@ var RequestAdapter = function(){
 		});
 	}
 	this.R = function(option){
+		var reqUrl=option.url;
+		if( 'production' == process.env.NODE_ENV ) {
+			var urlParsed = url.parse(reqUrl); 
+			urlParsed.host = '127.0.0.1';
+			reqUrl = url.format(urlParsed);
+		}
 		if(option.method === 'POST'){
-			return postPromise(option.url,{form:option.data,
+			return postPromise(reqUrl,{form:option.data,
 										type:option.type,
 										params:option.params,
 										headers:option.headers});
 		}else if(option.method === 'GET'){
-			return getPromise(option.url,{params:option.params,
+			return getPromise(reqUrl,{params:option.params,
 											headers:option.headers});
 		}else if(option.method === 'MULTI'){
-			return multiPromise(option.url,{params:option.params,
+			return multiPromise(reqUrl,{params:option.params,
 											fields:option.data,
 											headers:option.headers});
 		}else{

@@ -167,41 +167,6 @@ Wechat.prototype.checkScan = function() {
     })
 }
 
-/*
-Wechat.prototype.checkLogin = function() {
-    var self = this;
-    debug('checkLogin')
-    return self.request.R({
-        method: 'GET',
-        url: self[API].login + '?loginicon=true&tip=0&uuid=' + self[PROP].uuid
-    }).then(function(res) {
-        console.log(res.data);
-        var pm = res.data.match(/window.code=(\d+);/)
-        var code = pm[1]
-
-        if (code !== '200' && code !== 408) {
-            throw new Error('登陆确认code错误: ' + code)
-        }
-
-        if (code == 408) { // timeout continue;
-            debug('[408] timeout continue.')
-            return self.checkLogin.call(self);
-        }
-        pm = res.data.match(/window.redirect_uri="(\S+?)";/)
-        self[API].rediUri = pm[1] + '&fun=new'
-        self[API].baseUri = self[API].rediUri.substring(0, self[API].rediUri.lastIndexOf('/'))
-
-        // 接口更新
-        updateAPI(self[API])
-
-        self.emit('confirm', code)
-    }).catch(function(err) {
-        debug(err)
-        throw new Error('获取确认登录信息失败')
-    })
-}
-*/
-
 Wechat.prototype.login = function() {
     var self = this;
     debug('login')
