@@ -56,8 +56,12 @@ var RequestAdapter = function(){
 		var reqUrl=option.url;
 		if( 'production' == process.env.NODE_ENV ) {
 			var urlParsed = url.parse(reqUrl); 
-			urlParsed.host = '127.0.0.1';
+			urlParsed.host = '127.0.0.1'+':'+process.env.PORT;
+			urlParsed.protocol = process.env.PROTOCOL;
+			urlParsed.port = process.env.PORT;
 			reqUrl = url.format(urlParsed);
+			//console.log(urlParsed)
+			console.log(">>",reqUrl);
 		}
 		if(option.method === 'POST'){
 			return postPromise(reqUrl,{form:option.data,

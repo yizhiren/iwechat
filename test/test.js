@@ -1,52 +1,116 @@
-/**
-should.js:https://github.com/tj/should.js
-mocha.js:https://cnodejs.org/topic/516526766d38277306c7d277
-
-cd test
-..\node_modules\.bin\mocha
-
-**/
 
 var iWechat = require('../');
 var wechat = new iWechat();
-var minirequest = require('poorequest');
+var minirequest = require('../src/requestAdapter');
 var request = new minirequest();
 var fs=require('fs');
 var path = require('path');
 var express = require('express');
-var should = require('should');
 var app =  express.createServer();
 var Share=require('./share');
+var assert = require('assert');
 require('./server');
 //app.use(express.static(path.join(__dirname, '')));
 
+var result={}
 
-
-wechat.start();
-
-
-describe('wechat basic:', function(){
-	describe('test uuid:', function(){
-		it('should get uuid:',function(done){
-			wechat.on('uuid',function(uuid){
-				should(uuid).eql(Share.UUID);
-				var qrcodeUrl = 'https://login.weixin.qq.com/qrcode/' + uuid;
-				console.log(qrcodeUrl);
-
-				request.get(qrcodeUrl, function(err,res){
-					should(err).eql(undefined);					
-					should(res.raw.length).eql(100);
-					done();
-				})
-
-			})
-
-		})
-
-
+	result.scan=1;
+	wechat.on('scan', function()  {
+		console.log('scan ok.');
+		delete result.scan;
 	})
 
 
+	result.confirm=1;
+	wechat.on('confirm', function (){
+		console.log('confirm ok.');
+		delete result.confirm;
+	})
+
+
+	result.contactinfo=1;
+	wechat.on('contactinfo', function (prop){
+		assert(prop.uuid==Share.UUID);
+		assert(prop.uin==Share.WXUIN);
+		assert(prop.sid==Share.WXSID);
+		assert(prop.skey==Share.SKEY);
+		assert(prop.passTicket==Share.PASS_TICKET);
+
+
+		assert(prop.wxuin==Share.WXUIN);
+		assert(prop.wxsid==Share.WXSID);
+		assert(prop.pass_ticket==Share.PASS_TICKET);
+
+		assert(prop.baseRequest.Uin==Share.WXUIN);
+		assert(prop.baseRequest.Sid==Share.WXSID);
+		assert(prop.baseRequest.Skey==Share.SKEY);
+
+		assert(prop.webwxDataTicket == Share.DATATICKET);
+
+		delete result.contactinfo;
+	})
+
+
+
+	result.selfinfo=1;
+	wechat.on('selfinfo', function(info){
+		assert(info.Uin==Share.WXUIN);
+		assert(info.Signature==Share.SIGNATURE);
+		assert(info.Sex==1);
+		assert(info.NickName==Share.NICKNAME);
+		assert(info.UserName==Share.USERNAMEHASH);
+
+		delete result.selfinfo;
+	})
+
+
+	result.uuid=1;
+	wechat.on('uuid',function(uuid){
+		console.log('Get UUID:',uuid);
+		assert(uuid,Share.UUID);
+		var qrcodeUrl = 'https://login.weixin.qq.com/qrcode/' + uuid;
+		console.log(qrcodeUrl);
+
+		request.R({
+	        method: 'GET',
+	        url: qrcodeUrl
+	    }).then(function(res) {			    	
+	    	var explen=fs.lstatSync(path.join(__dirname,'qrcode.jpg')).size;
+			assert(res.raw.length == explen);
+			delete result.uuid;
+	    }).catch(function(err){
+	    	assert(err == undefined);
+	    	done();
+	    });
+	    assert(uuid==Share.UUID)
+	    
+	})
+
+
+	result['init-message']=1;
+	wechat.on('init-message', function(){
+		delete result['init-message'];
+	});
+
+	result['text-message']=1;
+	wechat.on('text-message', function(msg) {
+		assert('TEXT'==msg.Content);
+		delete result['text-message'];
+	});
+
+
+describe('wechat event:', function(){
+	describe('test all:', function(){
+		it('should get uuid:',function(done){
+			result.logout=1;
+			wechat.on('logout', function() {
+				delete result.logout;
+				assert(Object.keys(result).length == 0);
+				done();
+			})
+
+		})
+	});
 
 });
 
@@ -57,41 +121,7 @@ describe('wechat basic:', function(){
 
 
 
-
-
-
-
-
-
-wechat.on('uuid', function(uuid)  {
-	console.log('uuid:', uuid);
-	var qrcodeUrl = 'https://login.weixin.qq.com/qrcode/' + uuid;
-	console.log(qrcodeUrl);
-	request.get(qrcodeUrl, function(err,res){
-		if(err){
-			console.log(err);
-		}else{
-			fs.writeFileSync('qrcode.jpg',res.raw);
-			app.listen(1234)
-		}
-	})
-	
-})
-wechat.on('scan', function()  {
-	console.log('scan ok.');
-})
-wechat.on('confirm', function (){
-	console.log('confirm ok!')
-})
-wechat.on('login', function(memberList)  {
-	console.log('login ok. friends nums:', memberList.length);
-	for(var i=0;i<memberList.length;i++){
-		console.log(memberList[i].NickName+'('+memberList[i].RemarkName+')')
-	}
-})
-wechat.on('logout', function(fmsg) {
-	console.log('logout:',fmsg);
-})
+/*
 wechat.on('error', function(err){
 	console.log('error:',err);
 });
@@ -133,11 +163,11 @@ wechat.on('verify-message', function(msg) {
 
 
 
+*/
 
 
 
 
 
-
-
+wechat.start();
 

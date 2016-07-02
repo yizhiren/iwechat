@@ -14,6 +14,8 @@ var contentPrase = require('./utils').contentPrase
 var Request = require('./requestAdapter.js');
 var mime = require('mime');
 var querystring = require('querystring');
+var xmlparser = require('xml-parser');
+var cookieparser = require('simple-cookie');
 
 function Wechat() {
     function init_class() {
@@ -138,6 +140,7 @@ Wechat.prototype.checkScan = function() {
             'Referer': 'https://wx.qq.com/'
         }
     }).then(function(res) {
+        console.log('checkScan',res.data);
         var pm = res.data.match(/window.code=(\d+);/)
         var code = +pm[1]
 
@@ -153,7 +156,7 @@ Wechat.prototype.checkScan = function() {
             return self.checkScan.call(self);
         } else { //200
             pm = res.data.match(/window.redirect_uri="(\S+?)";/)
-            self[API].rediUri = pm[1] + '&fun=new'
+            self[API].rediUri = pm[1] + '&fun=new&version=v2'
             self[API].baseUri = self[API].rediUri.substring(0, self[API].rediUri.lastIndexOf('/'))
 
             // 接口更新
@@ -174,31 +177,44 @@ Wechat.prototype.login = function() {
         method: 'GET',
         url: self[API].rediUri
     }).then(function(res) {
-        self[PROP].skey = res.data.match(/<skey>(.*)<\/skey>/)[1]
-        self[PROP].sid = res.data.match(/<wxsid>(.*)<\/wxsid>/)[1]
-        self[PROP].uin = res.data.match(/<wxuin>(.*)<\/wxuin>/)[1]
-        self[PROP].passTicket = res.data.match(/<pass_ticket>(.*)<\/pass_ticket>/)[1]
-        self[PROP].skey = querystring.unescape(self[PROP].skey);
-        self[PROP].sid = querystring.unescape(self[PROP].sid);
-        self[PROP].uin = querystring.unescape(self[PROP].uin);
-        self[PROP].passTicket = querystring.unescape(self[PROP].passTicket);
+        var sessioninfo = querystring.unescape(res.data);
+        var jsonv = xmlparser(sessioninfo);
+        var values = jsonv.root.children;
+        for(var i=0; i<values.length; i++){
+            self[PROP][values[i].name] = values[i].content;
+        }
+        /** hack for compatible old code  **/
+        self[PROP].skey;
+        self[PROP].sid = self[PROP].wxsid;
+        self[PROP].uin = self[PROP].wxuin;
+        self[PROP].passTicket = self[PROP].pass_ticket;
 
+        /** maybe it's not needed **/
         if (res.headers['set-cookie']) {
             res.headers['set-cookie'].forEach(function(item) {
-                if (item.indexOf('webwxDataTicket') !== -1) {
-                    self[PROP].webwxDataTicket = item.split('; ').shift().split('=').pop()
+                var cookie = cookieparser.parse(item);
+                if ('webwx_data_ticket' == cookie.name) {
+                    self[PROP].webwxDataTicket = cookie.value;
                 }
             })
         }
+
         self[PROP].baseRequest = {
             'Uin': parseInt(self[PROP].uin, 10),
             'Sid': self[PROP].sid,
             'Skey': self[PROP].skey,
             'DeviceID': self[PROP].deviceId
         }
+        //console.log('PROP',self[PROP]);
+
+        if( 0 != self[PROP].ret    ){
+            throw new Error('获取登录信息失败:' + self[PROP].message);
+        }
+
+        self.emit('contactinfo',self[PROP]);
     }).catch(function(err) {
-        debug(err)
-        throw new Error('登录失败')
+        debug(err);
+        throw new Error('登录失败');
     })
 }
 
@@ -206,7 +222,7 @@ Wechat.prototype.init = function() {
     var self = this;
     debug('init')
     var params = {
-        'pass_ticket': self[PROP].passTicket,   //'skey': self[PROP].skey,
+        'pass_ticket': self[PROP].passTicket,  
         'lang': 'zh_CN',
         'r': +new Date()
     }
@@ -229,11 +245,13 @@ Wechat.prototype.init = function() {
         self._updateSyncKey(data['SyncKey'])
 
         if (data['BaseResponse']['Ret'] !== 0) {
-            throw new Error('微信初始化Ret错误' + data['BaseResponse']['Ret'])
+            throw new Error('微信初始化错误:' + data['BaseResponse']['ErrMsg']);
         }
+
+        self.emit('selfinfo', self.user);
     }).catch(function(err) {
-        debug(err)
-        throw new Error('微信初始化失败')
+        debug(err);
+        throw err;
     })
 }
 
@@ -247,19 +265,23 @@ Wechat.prototype.notifyMobile = function() {
         'ToUserName': self.user['UserName'],
         'ClientMsgId': +new Date()
     }
+    var params = {
+        'pass_ticket': self[PROP].passTicket
+    }
     return self.request.R({
         method: 'POST',
         url: self[API].webwxstatusnotify,
+        params: params,
         data: data,
         type: 'json'
     }).then(function(res) {
-        var data = res.data
+        var data = res.data;
         if (data['BaseResponse']['Ret'] !== 0) {
-            throw new Error('开启状态通知Ret错误' + data['BaseResponse']['Ret'])
+            throw new Error('开启状态通知错误:' + data['BaseResponse']['ErrMsg']);
         }
     }).catch(function(err) {
-        debug(err)
-        throw new Error('开启状态通知失败')
+        debug(err);
+        throw err;
     })
 }
 
@@ -278,16 +300,19 @@ Wechat.prototype.getContact = function() {
         url: self[API].webwxgetcontact,
         params: params
     }).then(function(res) {
-        var data = res.data
-        self.memberList = data['MemberList']
+        var data = res.data;
+        if (data['BaseResponse']['Ret'] !== 0) {
+            throw new Error('通讯录获取错误:' + data['BaseResponse']['ErrMsg']);
+        }
+
+        self.memberList = data['MemberList'];
 
         if (self.memberList.length === 0) {
             throw new Error('通讯录获取异常')
         }
 
         self.state = CONF.STATE.login
-        self.emit('login', self.memberList)
-
+        
         for (var ii in self.memberList) {
             var member = self.memberList[ii];
             member['NickName'] = convertEmoji(member['NickName'])
@@ -303,8 +328,17 @@ Wechat.prototype.getContact = function() {
                 self.contactList.push(member)
             }
         }
-        debug('好友数量：' + self.memberList.length)
-        return self.memberList
+        self.emit('login', [self.publicList,
+            self.specialList,
+            self.groupList,
+            self.contactList])
+
+        debug('好友数量：' + [self.publicList.length,
+            self.specialList.length,
+            self.groupList.length,
+            self.contactList.length,
+            self.memberList.length]);
+        return self.memberList;
     }).catch(function(err) {
         debug(err)
         throw new Error('获取通讯录失败')
@@ -316,7 +350,7 @@ Wechat.prototype.batchGetContact = function() {
     debug('batchgetcontact')
     var params = {
         'pass_ticket': self[PROP].passTicket,
-        'type': 'e',
+        'type': 'ex',
         'r': +new Date()
     }
     var data = {
@@ -346,8 +380,8 @@ Wechat.prototype.batchGetContact = function() {
                 self.groupMemberList.push(member)
             }
         }
-        debug('群组好友总数：', self.groupMemberList.length)
-        return self.groupMemberList
+        debug('群组好友总数：', self.groupMemberList.length);
+        return self.groupMemberList;
     }).catch(function(err) {
         debug(err)
         throw new Error('获取群组通讯录失败')
@@ -358,35 +392,33 @@ Wechat.prototype.syncPolling = function() {
     var self = this;
     debug('syncpolling')
     self._syncCheck().then(function(state) {
-	if(1100 == state.retcode){
-		debug('logout from phone');
-		self.emit('logout')
-	}else if (state.retcode !== CONF.SYNCCHECK_RET_SUCCESS) {
+        if(CONF.SYNCCHECK_RET_KICKOFF == state.retcode){
+            debug('logout from phone');
+            return self.logout();
+        } else if (CONF.SYNCCHECK_RET_SUCCESS !== state.retcode) {
             throw new Error('unknow error, alias logout')
         } else {
-            if (state.selector !== CONF.SYNCCHECK_SELECTOR_NORMAL) {
-                return self._sync().then(function(data) {
-                    setTimeout(function() {
-                        self.syncPolling()
-                    }, 1000)
-                    self._handleMsg(data)
-                })
-            } else {
-                debug('WebSync Normal')
-                setTimeout(function() {
-                    self.syncPolling()
-                }, 1000)
-            }
+            self.syncErrorCount = 0;
         }
+
+        if(CONF.SYNCCHECK_SELECTOR_NORMAL == state.selector){
+            debug('WebSync Normal')
+            return self.syncPolling();         
+        }else{
+            return self._sync().then(function(data) {
+                self._handleMsg(data)
+                return self.syncPolling();
+            })
+        } 
+        
     }).catch(function(err) {
-        if (++self.syncErrorCount > 3) {
-            debug(err)
-            self.emit('error', err)
-            self.logout()
+        var maxTryCount = 4;
+        if (++self.syncErrorCount > maxTryCount) {
+            debug(err);
+            self.emit('error', err);
+            return self.logout();
         } else {
-            setTimeout(function() {
-                self.syncPolling()
-            }, 1000)
+            return self.syncPolling();
         }
     })
 }
@@ -412,6 +444,9 @@ Wechat.prototype.logout = function() {
         data: data,
         type: 'txt'
     }).then(function(res) {
+        if(200 != res.status){
+            throw new Error('登出返回异常');
+        }
         self.state = CONF.STATE.logout
         self.emit('logout')
         return '登出成功'
@@ -427,35 +462,36 @@ Wechat.prototype.start = function() {
     var self = this;
     debug('start')
     return Promise.resolve(self.state === CONF.STATE.uuid ? 0 : self.getUUID())
-        .then(function() {
-            return self.checkScan();
-        }) 
-        .then(function() {
-            return self.login();
-        })
-        .then(function() {
-            return self.init();
-        })
-        .then(function() {
-            return self.notifyMobile();
-        })
-        .then(function() {
-            return self.getContact();
-        })
-        .then(function() {
-            return self.batchGetContact();
-        })
-        .then(function() {
-            if (self.state !== CONF.STATE.login) {
-                throw new Error('登陆失败，未进入SyncPolling')
-            }
-            return self.syncPolling()
-        }).catch(function(err) {
-            debug('启动失败', err)
-            self.stop();
-            self.emit('error',err);
-            throw new Error('启动失败')
-        })
+    .then(function() {
+        return self.checkScan();
+    }) 
+    .then(function() {
+        return self.login();
+    })
+    .then(function() {
+        return self.init();
+    })
+    .then(function() {
+        return self.notifyMobile();
+    })
+    .then(function() {
+        return self.getContact();
+    })
+    .then(function() {
+        return self.batchGetContact();
+    })
+    .then(function() {
+        if (self.state !== CONF.STATE.login) {
+            throw new Error('登陆失败，未进入SyncPolling')
+        }
+        debug('登陆成功');
+        return self.syncPolling()
+    }).catch(function(err) {
+        debug('启动失败', err)
+        self.stop();
+        self.emit('error',err);
+        throw new Error('启动失败')
+    })
 }
 
 Wechat.prototype.stop = function() {
@@ -501,13 +537,13 @@ Wechat.prototype.sendMsg = function(msg, to) {
 Wechat.prototype.sendImage = function(to, file, type, size) {
     var self = this;
     return self._uploadMedia(file, type, size)
-        .then(function(mediaId) {
-            return self._sendImage(mediaId, to);
-        })
-        .catch(function(err) {
-            debug(err)
-            throw new Error('发送图片信息失败')
-        })
+    .then(function(mediaId) {
+        return self._sendImage(mediaId, to);
+    })
+    .catch(function(err) {
+        debug(err)
+        throw new Error('发送图片信息失败')
+    })
 }
 
 Wechat.prototype._syncCheck = function() {
@@ -526,7 +562,7 @@ Wechat.prototype._syncCheck = function() {
         url: self[API].synccheck,
         params: params
     }).then(function(res) {
-        //console.log('_sync check:', res.data);
+        console.log('_sync check:', res.data);
         var re = /window.synccheck={retcode:"(\d+)",selector:"(\d+)"}/
         var pm = res.data.match(re)
 
@@ -565,7 +601,7 @@ Wechat.prototype._sync = function() {
     }).then(function(res) {
         var data = res.data
         if (data['BaseResponse']['Ret'] !== 0) {
-            throw new Error('拉取消息Ret错误: ' + data['BaseResponse']['Ret'])
+            throw new Error('拉取消息Ret错误: ' + data['BaseResponse']['ErrMsg'])
         }
 
         self._updateSyncKey(data['SyncKey'])
@@ -584,42 +620,41 @@ Wechat.prototype._handleMsg = function(data) {
     data['AddMsgList'].forEach(function(msg) {
         var type = +msg['MsgType']
         var fromUser = self._getUserRemarkName(msg['FromUserName'])
-        var content = contentPrase(msg['Content'])
-
+        var content = contentPrase(msg['Content']); // can raise error here
         switch (type) {
             case CONF.MSGTYPE_STATUSNOTIFY:
-                debug(' Message: Init')
-                self.emit('init-message')
-                break
+            debug(' Message: Init')
+            self.emit('init-message')
+            break
             case CONF.MSGTYPE_TEXT:
-                debug(' Text-Message: ', fromUser, ': ', content)
-                self.emit('text-message', msg)
-                break
+            debug(' Text-Message: ', fromUser, ': ', content)
+            self.emit('text-message', msg)
+            break
             case CONF.MSGTYPE_IMAGE:
-                debug(' Image-Message: ', fromUser, ': ', content)
-                self._getMsgImg(msg.MsgId).then(function(image) {
-                    msg.Content = image
-                    self.emit('image-message', msg)
-                })
-                break
+            debug(' Image-Message: ', fromUser, ': ', content)
+            self._getMsgImg(msg.MsgId).then(function(image) {
+                msg.Content = image
+                self.emit('image-message', msg)
+            })
+            break
             case CONF.MSGTYPE_VOICE:
-                debug(' Voice-Message: ', fromUser, ': ', content)
-                self._getVoice(msg.MsgId).then(function(voice) {
-                    msg.Content = voice
-                    self.emit('voice-message', msg)
-                })
-                break
+            debug(' Voice-Message: ', fromUser, ': ', content)
+            self._getVoice(msg.MsgId).then(function(voice) {
+                msg.Content = voice
+                self.emit('voice-message', msg)
+            })
+            break
             case CONF.MSGTYPE_EMOTICON:
-                debug(' Emoticon-Message: ', fromUser, ': ', content)
-                self._getEmoticon(content).then(function(emoticon) {
-                    msg.Content = emoticon
-                    self.emit('emoticon-message', msg)
-                })
-                break
+            debug(' Emoticon-Message: ', fromUser, ': ', content)
+            self._getEmoticon(content).then(function(emoticon) {
+                msg.Content = emoticon
+                self.emit('emoticon-message', msg)
+            })
+            break
             case CONF.MSGTYPE_VERIFYMSG:
-                debug(' Message: Add Friend')
-                self.emit('verify-message', msg)
-                break
+            debug(' Message: Add Friend')
+            self.emit('verify-message', msg)
+            break
         }
     })
 }
@@ -633,7 +668,7 @@ Wechat.prototype._uploadMedia = function(fullfilename) {
     var filename = path.basename(fullfilename);
 
     var mediaId = self.mediaSend++
-        var clientMsgId = +new Date() + '0' + Math.random().toString().substring(2, 5)
+    var clientMsgId = +new Date() + '0' + Math.random().toString().substring(2, 5)
 
     var uploadMediaRequest = JSON.stringify({
         BaseRequest: self[PROP].baseRequest,
