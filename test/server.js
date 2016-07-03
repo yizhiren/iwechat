@@ -480,6 +480,26 @@ app.get('/',function(req,res){
 			res.setHeader('Set-Cookie','wxsid=; Path=/; Expires=Thu, 01-Jan-1970 00:00:30 GMT');
 			res.send(200);
 		})
+
+                             app.post('/cgi-bin/mmwebwx-bin/webwxsendmsg',function(req,res){
+                                           console.log(req.method,req.url);
+                                            assert(Share.PASS_TICKET == req.query.pass_ticket
+                                                && Share.WXUIN == req.body.BaseRequest.Uin
+                                                && Share.WXSID == req.body.BaseRequest.Sid
+                                                && Share.SKEY == req.body.BaseRequest.Skey
+                                                && 1 == req.body.Msg.Type
+                                                && req.body.Msg.Content
+                                                && req.body.Msg.FromUserName
+                                                && req.body.Msg.LocalID
+                                                && req.body.Msg.ClientMsgId)
+                                            res.send(JSON.stringify({
+                                                "BaseResponse": {
+                                                "Ret": 0,
+                                                "ErrMsg": ""
+                                                }
+                                            }));
+                             })
+
 app.listen(Share.PORT);
 console.log('listening',Share.PORT);
 

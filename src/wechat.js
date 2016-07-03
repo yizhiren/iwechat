@@ -384,7 +384,7 @@ Wechat.prototype.batchGetContact = function() {
         return self.groupMemberList;
     }).catch(function(err) {
         debug(err)
-        throw new Error('获取群组通讯录失败')
+        throw err;
     })
 }
 
@@ -461,7 +461,10 @@ Wechat.prototype.logout = function() {
 Wechat.prototype.start = function() {
     var self = this;
     debug('start')
-    return Promise.resolve(self.state === CONF.STATE.uuid ? 0 : self.getUUID())
+    return Promise.resolve()
+    .then(function(){
+        return self.getUUID();
+    })
     .then(function() {
         return self.checkScan();
     }) 
@@ -481,16 +484,13 @@ Wechat.prototype.start = function() {
         return self.batchGetContact();
     })
     .then(function() {
-        if (self.state !== CONF.STATE.login) {
-            throw new Error('登陆失败，未进入SyncPolling')
-        }
         debug('登陆成功');
         return self.syncPolling()
     }).catch(function(err) {
-        debug('启动失败', err)
+        debug('启动失败', err);
         self.stop();
         self.emit('error',err);
-        throw new Error('启动失败')
+        throw err;
     })
 }
 
@@ -500,7 +500,7 @@ Wechat.prototype.stop = function() {
     return self.state === CONF.STATE.login ? self.logout() : Promise.resolve()
 }
 
-Wechat.prototype.sendMsg = function(msg, to) {
+Wechat.prototype.sendMsg = function(msg, to, callback) {
     var self = this;
     var params = {
         'pass_ticket': self[PROP].passTicket
@@ -526,11 +526,13 @@ Wechat.prototype.sendMsg = function(msg, to) {
     }).then(function(res) {
         var data = res.data
         if (data['BaseResponse']['Ret'] !== 0) {
-            throw new Error('发送信息Ret错误: ' + data['BaseResponse']['Ret'])
+            throw new Error('发送信息Ret错误: ' + data['BaseResponse']['ErrMsg'])
         }
+        if(callback)callback();
     }).catch(function(err) {
-        debug(err)
-        throw new Error('发送信息失败')
+        debug(err);
+        if(callback)callback(err);
+        throw err;
     })
 }
 
@@ -542,7 +544,7 @@ Wechat.prototype.sendImage = function(to, file, type, size) {
     })
     .catch(function(err) {
         debug(err)
-        throw new Error('发送图片信息失败')
+        throw err;
     })
 }
 
@@ -608,7 +610,7 @@ Wechat.prototype._sync = function() {
         return data
     }).catch(function(err) {
         debug(err)
-        throw new Error('获取新信息失败')
+        throw err;
     })
 }
 
@@ -777,7 +779,7 @@ Wechat.prototype._sendImage = function(mediaId, to) {
         }
     }).catch(function(err) {
         debug(err)
-        throw new Error('发送图片失败')
+        throw err;
     })
 }
 
@@ -801,7 +803,7 @@ Wechat.prototype._getMsgImg = function(msgId) {
         }
     }).catch(function(err) {
         debug(err)
-        throw new Error('获取图片失败')
+        throw err;
     })
 }
 
@@ -825,7 +827,7 @@ Wechat.prototype._getVoice = function(msgId) {
         }
     }).catch(function(err) {
         debug(err)
-        throw new Error('获取声音失败')
+        throw err;
     })
 }
 
@@ -847,7 +849,7 @@ Wechat.prototype._getEmoticon = function(content) {
         }
     }).catch(function(err) {
         debug(err)
-        throw new Error('获取表情失败')
+        throw err;
     })
 }
 
@@ -868,7 +870,7 @@ Wechat.prototype._getHeadImg = function(member) {
         return headImg
     }).catch(function(err) {
         debug(err)
-        throw new Error('获取头像失败')
+        throw err;
     })
 }
 
