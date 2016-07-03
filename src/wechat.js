@@ -328,10 +328,10 @@ Wechat.prototype.getContact = function() {
                 self.contactList.push(member)
             }
         }
-        self.emit('login', [self.publicList,
-            self.specialList,
-            self.groupList,
-            self.contactList])
+        self.emit('login', [{type:CONF.CONTACT_TYPE_PUBLIC, list:self.publicList},
+            {type:CONF.CONTACT_TYPE_SPECIAL,list:self.specialList},
+            {type:CONF.CONTACT_TYPE_GROUP,list:self.groupList},
+            {type:CONF.CONTACT_TYPE_CONTACT,list:self.contactList}])
 
         debug('好友数量：' + [self.publicList.length,
             self.specialList.length,
@@ -624,7 +624,7 @@ Wechat.prototype._handleMsg = function(data) {
         switch (type) {
             case CONF.MSGTYPE_STATUSNOTIFY:
             debug(' Message: Init')
-            self.emit('init-message')
+            self.emit('init-message',msg)
             break
             case CONF.MSGTYPE_TEXT:
             debug(' Text-Message: ', fromUser, ': ', content)
