@@ -50,7 +50,7 @@ app.get('/',function(req,res){
 
 			assert(Share.UUID == req.params.uuid);
 			console.log('sendfile',path.join(__dirname,'qrcode_.jpg'));
-			res.sendfile(path.join(__dirname,'qrcode_.jpg'));
+			res.sendfile('qrcode_.jpg',{root:__dirname});
 
 	
 		})
