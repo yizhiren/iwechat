@@ -16,7 +16,7 @@ https://github.com/nodeWechat/wechat4u
 
 #usage
 
-    https://github.com/yizhiren/wechat-example
+https://github.com/yizhiren/wechat-example
 	
 
 
