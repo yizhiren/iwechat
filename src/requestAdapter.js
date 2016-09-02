@@ -13,8 +13,8 @@ var RequestAdapter = function() {
                     reject(err);
                 } else {
                     try {
-                        res.data = res.raw.toString();
-                        res.data = JSON.parse(res.data);
+                        res.data = res.body.toString();
+                        res.data = res.body.toJson();
                     } catch(e) {}
                     resolve(res);
                 }
@@ -30,8 +30,8 @@ var RequestAdapter = function() {
                     reject(err);
                 } else {
                     try {
-                        res.data = res.raw.toString();
-                        res.data = JSON.parse(res.data);
+                        res.data = res.body.toString();
+                        res.data = res.body.toJson();
                     } catch(e) {}
                     resolve(res);
                 }
@@ -47,8 +47,8 @@ var RequestAdapter = function() {
                     reject(err);
                 } else {
                     try {
-                        res.data = res.raw.toString();
-                        res.data = JSON.parse(res.data);
+                        res.data = res.body.toString();
+                        res.data = res.body.toJson();
                     } catch(e) {}
                     resolve(res);
                 }
