@@ -107,7 +107,7 @@ Wechat.prototype.getUUID = function() {
         method: 'GET',
         url: self[API].jsLogin,
         params: params
-    }).then(function(res) {
+    }).then(function(res) { console.log(res.raw.toString())
         var pm = res.data.match(/window.QRLogin.code = (\d+); window.QRLogin.uuid = "(\S+?)"/)
         if (!pm) {
             throw new Error('UUID错误: 格式错误')
