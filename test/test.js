@@ -92,6 +92,7 @@ function() {
 
 result['text-message'] = 1;
 result['reply-text-message'] = 1;
+result['get-friend-list'] = 1;
 wechat.on('text-message',
 function(msg) {
     assert('TEXT' == msg.Content);
@@ -101,6 +102,14 @@ function(msg) {
     	assert(!err);
     	delete result['reply-text-message'];
     })
+
+    var friends = wechat.getFriendList();
+    console.log(friends);
+    assert(1 === friends.length);
+    assert(Share.AnyFriend1 === friends[0].UserName);
+    delete result['get-friend-list'];
+
+
 });
 
 describe('wechat event:',

@@ -120,7 +120,7 @@ app.get('/',function(req,res){
 				"ErrMsg": ""
 				}
 				,
-				"Count": 1,
+				"Count": 2,
 				"ContactList": [{
 				"Uin": 0,
 				"UserName": "filehelper",
@@ -152,8 +152,7 @@ app.get('/',function(req,res){
 				"ChatRoomId": 0,
 				"KeyWord": "fil",
 				"EncryChatRoomId": ""
-				}
-				],
+				}],
 				"SyncKey": Share.SYNCKEY,
 				"User": {
 				"Uin": 733312840,
@@ -261,7 +260,38 @@ app.get('/',function(req,res){
 					"ChatRoomId": 0,
 					"KeyWord": "gh_",
 					"EncryChatRoomId": ""
-					}],
+          },{
+					"Uin": 0,
+					"UserName": Share.AnyFriend1,
+					"NickName": "any user 1",
+					"HeadImgUrl": "/cgi-bin/mmwebwx-bin/webwxgeticon?seq=1340088&username=gh_22b87fa7cb3c&skey=@crypt_cd96f188_6e197aaf27f83dceda6d414cbc43f775",
+					"ContactFlag": 67,
+					"MemberCount": 0,
+					"MemberList": [],
+					"RemarkName": "",
+					"HideInputBarFlag": 0,
+					"Sex": 0,
+					"Signature": "向我发送语音消息即可设置提醒。",
+					"VerifyFlag": 0,
+					"OwnerUin": 0,
+					"PYInitial": "YYDX",
+					"PYQuanPin": "yuyindixing",
+					"RemarkPYInitial": "",
+					"RemarkPYQuanPin": "",
+					"StarFriend": 1,
+					"AppAccountFlag": 0,
+					"Statues": 0,
+					"AttrStatus": 0,
+					"Province": "广东",
+					"City": "广州",
+					"Alias": "voicereminder",
+					"SnsFlag": 0,
+					"UniFriend": 0,
+					"DisplayName": "",
+					"ChatRoomId": 0,
+					"KeyWord": "gh_",
+					"EncryChatRoomId": ""
+          }],
 					"Seq": 0
 				}) );
 

@@ -79,7 +79,7 @@ Wechat.prototype.getFriendList = function() {
 
     self.contactList.forEach(function(member) {
         members.push({
-            Username: member['UserName'],
+            UserName: member['UserName'],
             NickName: member['NickName'],
             RemarkName: member['RemarkName'],
             PYQuanPin: member['PYQuanPin'],
@@ -97,7 +97,7 @@ Wechat.prototype.getGroupList = function() {
     var members = []
     self.groupList.forEach(function(member) {
         members.push({
-            Username: member['UserName'],
+            UserName: member['UserName'],
             NickName: member['NickName'],
             RemarkName: member['RemarkName'],
             PYQuanPin: member['PYQuanPin'],

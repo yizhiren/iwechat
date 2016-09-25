@@ -17,6 +17,7 @@ module.exports={
 	,DATATICKET_COOKIE:'webwx_data_ticket=gScNNYISPqVmuYUylleCbMV; Path=/; Expires=Sat, 02-Jul-2016 18:11:48'
 	,SIGNATURE:'懒惰驶得万年船'
 	,NICKNAME:'DEMO'
+  ,AnyFriend1:'AnyFriend1xxx'
 	,USERNAMEHASH:'@61caa0194e13d01b959547c100123456'
 	,SYNCCHECK:['window.synccheck={retcode:"0",selector:"2"}','window.synccheck={retcode:"123",selector:"0"}','window.synccheck={retcode:"0",selector:"0"}','window.synccheck={retcode:"1100",selector:"0"}','window.synccheck={retcode:"0",selector:"0"}']
 	,SYNCKEY:{
