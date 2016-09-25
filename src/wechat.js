@@ -71,29 +71,43 @@ Wechat.prototype.getProp = function(key) {
     return self[PROP][key]
 }
 
-// 通讯录好友
-Wechat.prototype.getfriendList = function() {
+
+// friends
+Wechat.prototype.getFriendList = function() {
+    var self = this;
+    var members = []
+
+    self.contactList.forEach(function(member) {
+        members.push({
+            Username: member['UserName'],
+            NickName: member['NickName'],
+            RemarkName: member['RemarkName'],
+            PYQuanPin: member['PYQuanPin'],
+            RemarkPYQuanPin: member['RemarkPYQuanPin'],
+            avatar: self[API].baseUri.match(/http.*?\/\/.*?(?=\/)/)[0] + member.HeadImgUrl
+        })
+    })
+
+    return members;
+}
+
+// group
+Wechat.prototype.getGroupList = function() {
     var self = this;
     var members = []
     self.groupList.forEach(function(member) {
         members.push({
-            username: member['UserName'],
-            nickname: '群聊: ' + member['NickName'],
-            py: member['RemarkPYQuanPin'] ? member['RemarkPYQuanPin'] : member['PYQuanPin'],
+            Username: member['UserName'],
+            NickName: member['NickName'],
+            RemarkName: member['RemarkName'],
+            PYQuanPin: member['PYQuanPin'],
+            RemarkPYQuanPin: member['RemarkPYQuanPin'],
             avatar: self[API].baseUri.match(/http.*?\/\/.*?(?=\/)/)[0] + member.HeadImgUrl
         })
     })
 
-    self.contactList.forEach(function(member) {
-        members.push({
-            username: member['UserName'],
-            nickname: member['RemarkName'] ? member['RemarkName'] : member['NickName'],
-            py: member['RemarkPYQuanPin'] ? member['RemarkPYQuanPin'] : member['PYQuanPin'],
-            avatar: self[API].baseUri.match(/http.*?\/\/.*?(?=\/)/)[0] + member.HeadImgUrl
-        })
-    })
 
-    return members
+    return members;
 }
 
 Wechat.prototype.getUUID = function() {
